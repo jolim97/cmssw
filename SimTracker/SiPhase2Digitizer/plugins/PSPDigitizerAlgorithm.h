@@ -3,9 +3,6 @@
 
 #include "SimTracker/SiPhase2Digitizer/plugins/Phase2TrackerDigitizerAlgorithm.h"
 
-// forward declarations
-class TrackerTopology;
-
 class PSPDigitizerAlgorithm : public Phase2TrackerDigitizerAlgorithm {
 public:
   PSPDigitizerAlgorithm(const edm::ParameterSet& conf);
@@ -19,8 +16,10 @@ public:
   void accumulateSimHits(const std::vector<PSimHit>::const_iterator inputBegin,
                          const std::vector<PSimHit>::const_iterator inputEnd,
                          const size_t inputBeginGlobalIndex,
-                         const unsigned int tofBin,
+                         const uint32_t tofBin,
                          const Phase2TrackerGeomDetUnit* pixdet,
                          const GlobalVector& bfield) override;
+  bool select_hit(const PSimHit& hit, double tCorr, double& sigScale) override;
+  bool isAboveThreshold(const DigitizerUtility::SimHitInfo* hitInfo, float charge, float thr) override;
 };
 #endif
