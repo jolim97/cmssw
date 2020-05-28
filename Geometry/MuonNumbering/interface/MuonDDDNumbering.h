@@ -15,20 +15,22 @@
  */
 
 #include "DetectorDescription/Core/interface/DDExpandedNode.h"
+#include "DetectorDescription/DDCMS/interface/ExpandedNodes.h"
 #include "DetectorDescription/Core/interface/DDLogicalPart.h"
 
 class MuonBaseNumber;
-class MuonDDDConstants;
+class MuonGeometryConstants;
 
 class MuonDDDNumbering {
 public:
-  MuonDDDNumbering(const MuonDDDConstants& muonConstants);
+  MuonDDDNumbering(const MuonGeometryConstants& muonConstants);
   ~MuonDDDNumbering(){};
 
-  MuonBaseNumber geoHistoryToBaseNumber(const DDGeoHistory& history);
+  MuonBaseNumber geoHistoryToBaseNumber(const DDGeoHistory& history) const;
+  MuonBaseNumber geoHistoryToBaseNumber(const cms::ExpandedNodes&) const;
 
 private:
-  int getInt(const std::string& s, const DDLogicalPart& part);
+  int getInt(const std::string& s, const DDLogicalPart& part) const;
 
   int theLevelPart;
   int theSuperPart;

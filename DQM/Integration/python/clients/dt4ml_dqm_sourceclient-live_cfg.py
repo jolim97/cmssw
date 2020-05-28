@@ -1,14 +1,22 @@
 from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
+import sys
 import os
 
 process = cms.Process("DTDQM")
 
+unitTest = False
+if 'unitTest=True' in sys.argv:
+    unitTest=True
+
 #----------------------------
 #### Event Source
 #----------------------------
-# for live online DQM in P5
-process.load("DQM.Integration.config.inputsource_cfi")
+if unitTest:
+    process.load("DQM.Integration.config.unittestinputsource_cfi")
+else:
+    # for live online DQM in P5
+    process.load("DQM.Integration.config.inputsource_cfi")
 
 # for testing in lxplus
 #process.load("DQM.Integration.config.fileinputsource_cfi")
@@ -17,8 +25,6 @@ process.load("DQM.Integration.config.inputsource_cfi")
 #### DQM Environment
 #----------------------------
 process.load("DQM.Integration.config.environment_cfi")
-process.DQMStore.referenceFileName = '/dqmdata/dqm/reference/dt_reference.root'
-#process.DQMStore.referenceFileName = "DT_reference.root"
 
 #----------------------------
 #### DQM Live Environment
@@ -38,7 +44,9 @@ except:
 
 process.dqmSaver.backupLumiCount = 10
 process.dqmSaver.keepBackupLumi = True
-process.dqmSaver.path = filePath
+
+if not unitTest:
+    process.dqmSaver.path = filePath
 
 # disable DQM gui
 print("old:",process.DQM.collectorHost)
@@ -80,7 +88,7 @@ print("Running with run type = ", process.runType.getRunType())
 #----------------------------
 
 if (process.runType.getRunType() == process.runType.pp_run):
-    process.DQMStore.referenceFileName = '/dqmdata/dqm/reference/dt_reference_pp.root'
+    pass
 
 
 #----------------------------
@@ -88,7 +96,7 @@ if (process.runType.getRunType() == process.runType.pp_run):
 #----------------------------
 
 if (process.runType.getRunType() == process.runType.cosmic_run):
-    process.DQMStore.referenceFileName = '/dqmdata/dqm/reference/dt_reference_cosmic.root'
+    pass
 
 
 #----------------------------
@@ -103,7 +111,6 @@ if (process.runType.getRunType() == process.runType.hi_run):
     
     process.dtDigiMonitor.ResetCycle = cms.untracked.int32(9999)
 
-    process.DQMStore.referenceFileName = '/dqmdata/dqm/reference/dt_reference_hi.root'
 
 
 ### process customizations included here

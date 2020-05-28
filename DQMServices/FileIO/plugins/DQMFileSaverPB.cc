@@ -44,6 +44,13 @@ void DQMFileSaverPB::initRun() const {
     transferDestination_ = edm::Service<evf::EvFDaqDirector>()->getStreamDestinations(streamLabel_);
     mergeType_ = edm::Service<evf::EvFDaqDirector>()->getStreamMergeType(streamLabel_, evf::MergeTypePB);
   }
+
+  if (!fakeFilterUnitMode_) {
+    evf::EvFDaqDirector* daqDirector = (evf::EvFDaqDirector*)(edm::Service<evf::EvFDaqDirector>().operator->());
+    const std::string initFileName = daqDirector->getInitFilePath(streamLabel_);
+    std::ofstream file(initFileName);
+    file.close();
+  }
 }
 
 void DQMFileSaverPB::saveLumi(const FileParameters& fp) const {
@@ -83,7 +90,7 @@ void DQMFileSaverPB::saveLumi(const FileParameters& fp) const {
 
   if (fms ? fms->getEventsProcessedForLumi(fp.lumi_) : true) {
     // Save the file in the open directory.
-    this->savePB(&*store, openHistoFilePathName, store->mtEnabled() ? fp.run_ : 0, fp.lumi_);
+    this->savePB(&*store, openHistoFilePathName, fp.run_, fp.lumi_);
 
     // Now move the the data and json files into the output directory.
     ::rename(openHistoFilePathName.c_str(), histoFilePathName.c_str());
@@ -207,7 +214,6 @@ void DQMFileSaverPB::savePB(DQMStore* store, std::string const& filename, int ru
 
   dqmstorepb::ROOTFilePB dqmstore_message;
 
-  // TODO: while we still have enableMultiThread, maybe this does the wrong thing.
   // We save all histograms, indifferent of the lumi flag: even tough we save per lumi, this is a *snapshot*.
   auto mes = store->getAllContents("");
   for (auto const me : mes) {
@@ -219,8 +225,7 @@ void DQMFileSaverPB::savePB(DQMStore* store, std::string const& filename, int ru
       buffer.WriteObject(me->getRootObject());
     }
     dqmstorepb::ROOTFilePB::Histo& histo = *dqmstore_message.add_histo();
-    // TODO: getPathname returns a name with trailing slash?
-    histo.set_full_pathname(me->getPathname() + "/" + me->getName());
+    histo.set_full_pathname(me->getFullname());
     uint32_t flags = 0;
     flags |= (uint32_t)me->kind();
     if (me->getLumiFlag())

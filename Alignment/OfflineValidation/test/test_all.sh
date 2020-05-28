@@ -9,6 +9,11 @@ if test -f "validation_config.ini"; then
     rm -f validation_config.ini
 fi
 
+## copy into local sqlite file the ideal alignment
+echo "COPYING locally Ideal Alignment ..."
+conddb --yes --db pro copy TrackerAlignment_Upgrade2017_design_v4 --destdb myfile.db
+
+echo "GENERATING all-in-one tool configuration ..."
 cat <<EOF >> validation_config.ini
 [general]
 jobmode = interactive
@@ -23,6 +28,7 @@ style = 2001
 [alignment:express]
 title = express
 globaltag = 92X_dataRun2_Express_v2
+condition TrackerAlignmentRcd =  sqlite_file:myfile.db,TrackerAlignment_Upgrade2017_design_v4
 color = 2
 style = 2402
 
@@ -54,6 +60,31 @@ etaminneg = -2.4
 etamaxpos = 2.4
 etaminpos = -2.4
 
+[primaryvertex:validation_HLTPhysics]
+maxevents = 10000
+multiIOV = false
+dataset = /HLTPhysics/Run2017A-TkAlMinBias-PromptReco-v1/ALCARECO
+trackcollection = ALCARECOTkAlMinBias
+vertexcollection = offlinePrimaryVertices
+isda = True
+ismc = True
+numberOfBins = 48
+runboundary = 1
+lumilist = None
+ptCut  = 3.
+etaCut = 2.5
+runControl = False
+
+[pvresolution:validation_JetHT]
+multiIOV = false
+maxevents = 50000
+dataset = /JetHT/Run2017B-TkAlMinBias-09Aug2019_UL2017-v1/ALCARECO
+trackcollection = ALCARECOTkAlMinBias
+runboundary = 1
+runControl = False
+doTriggerSelection = False
+triggerBits = "*"
+
 [split:some_split_validation]
 multiIOV = false
 maxevents = 10
@@ -81,16 +112,42 @@ customtitle = #CMS{Preliminary}
 customrighttitle = 2016G Z#rightarrow#mu#mu data, |#eta|<2.4
 legendheader = header
 
+[plots:primaryvertex]
+doMaps = true
+stdResiduals = true
+autoLimits = false
+m_dxyPhiMax = 40
+m_dzPhiMax = 40
+m_dxyEtaMax = 40
+m_dzEtaMax = 40
+m_dxyPhiNormMax = 0.5
+m_dzPhiNormMax = 0.5
+m_dxyEtaNormMax = 0.5
+m_dzEtaNormMax = 0.5
+w_dxyPhiMax = 150
+w_dzPhiMax = 150
+w_dxyEtaMax = 150
+w_dzEtaMax = 1000
+w_dxyPhiNormMax = 1.8
+w_dzPhiNormMax = 1.8
+w_dxyEtaNormMax = 1.8
+w_dzEtaNormMax = 1.8
+
 [validation]
-offline validation_MinBias : prompt
-offline validation_MinBias : express
-offline validation_cosmics : prompt
-offline validation_cosmics : express
-compare Tracker: prompt 278819, express 278819
-zmumu some_zmumu_validation : prompt
-zmumu some_zmumu_validation : express
-split some_split_validation : prompt
-split some_split_validation : express
+offline validation_MinBias - prompt :
+offline validation_MinBias - express :
+offline validation_cosmics - prompt :
+offline validation_cosmics - express :
+primaryvertex validation_HLTPhysics - prompt :
+primaryvertex validation_HLTPhysics - express :
+pvresolution validation_JetHT - prompt :
+pvresolution validation_JetHT - express :
+compare Tracker - prompt 278819, express 278819 :
+zmumu some_zmumu_validation - prompt :
+zmumu some_zmumu_validation - express :
+split some_split_validation - prompt :
+split some_split_validation - express :
 EOF
 
+echo "TESTING all-in-one tool ..."
 validateAlignments.py -c validation_config.ini -N testingAllInOneTool --dryRun || die "Failure running all-in-one test" $?

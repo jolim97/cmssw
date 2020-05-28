@@ -27,7 +27,6 @@
 #include "TProfile.h"
 
 // user include files
-#include "FWCore/Framework/interface/OutputModule.h"
 #include "FWCore/Framework/interface/one/OutputModule.h"
 #include "FWCore/Framework/interface/RunForOutput.h"
 #include "FWCore/Framework/interface/LuminosityBlockForOutput.h"
@@ -41,6 +40,8 @@
 #include "DataFormats/Provenance/interface/ProcessHistoryID.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "FWCore/ParameterSet/interface/Registry.h"
+
+#include "DataFormats/Histograms/interface/DQMToken.h"
 
 #include "format.h"
 
@@ -221,7 +222,6 @@ private:
   ULong64_t m_firstIndex;
   ULong64_t m_lastIndex;
   unsigned int m_filterOnRun;
-  bool m_enableMultiThread;
 
   std::string m_fullNameBuffer;
   std::string* m_fullNameBufferPtr;
@@ -284,20 +284,23 @@ DQMRootOutputModule::DQMRootOutputModule(edm::ParameterSet const& pset)
       m_treeHelpers(kNIndicies, std::shared_ptr<TreeHelperBase>()),
       m_presentHistoryIndex(0),
       m_filterOnRun(pset.getUntrackedParameter<unsigned int>("filterOnRun")),
-      m_enableMultiThread(false),
       m_fullNameBufferPtr(&m_fullNameBuffer),
-      m_indicesTree(nullptr) {}
+      m_indicesTree(nullptr) {
+  // Declare dependencies for all Lumi and Run tokens here. In
+  // principle could use the keep statements, but then DQMToken would
+  // have to be made persistent (transient products are ignored),
+  // which would lead to a need to (finally) remove underscores from
+  // DQM module labels.
+  consumesMany<DQMToken, edm::InLumi>();
+  consumesMany<DQMToken, edm::InRun>();
+}
 
 // DQMRootOutputModule::DQMRootOutputModule(const DQMRootOutputModule& rhs)
 // {
 //    // do actual copying here;
 // }
 
-void DQMRootOutputModule::beginJob() {
-  // Determine if we are running multithreading asking to the DQMStore. Not to be moved in the ctor
-  edm::Service<DQMStore> dstore;
-  m_enableMultiThread = dstore->enableMultiThread_;
-}
+void DQMRootOutputModule::beginJob() {}
 
 DQMRootOutputModule::~DQMRootOutputModule() {}
 
@@ -388,14 +391,12 @@ void DQMRootOutputModule::writeLuminosityBlock(edm::LuminosityBlockForOutput con
 
   if (!shouldWrite)
     return;
-  std::vector<MonitorElement*> items(
-      dstore->getAllContents("", m_enableMultiThread ? m_run : 0, m_enableMultiThread ? m_lumi : 0));
+  std::vector<MonitorElement*> items(dstore->getAllContents("", m_run, m_lumi));
   for (std::vector<MonitorElement*>::iterator it = items.begin(), itEnd = items.end(); it != itEnd; ++it) {
-    if ((*it)->getLumiFlag()) {
-      std::map<unsigned int, unsigned int>::iterator itFound = m_dqmKindToTypeIndex.find((int)(*it)->kind());
-      assert(itFound != m_dqmKindToTypeIndex.end());
-      m_treeHelpers[itFound->second]->fill(*it);
-    }
+    assert((*it)->getScope() == MonitorElementData::Scope::LUMI);
+    std::map<unsigned int, unsigned int>::iterator itFound = m_dqmKindToTypeIndex.find((int)(*it)->kind());
+    assert(itFound != m_dqmKindToTypeIndex.end());
+    m_treeHelpers[itFound->second]->fill(*it);
   }
 
   const edm::ProcessHistoryID& id = iLumi.processHistoryID();
@@ -446,13 +447,12 @@ void DQMRootOutputModule::writeRun(edm::RunForOutput const& iRun) {
   if (!shouldWrite)
     return;
 
-  std::vector<MonitorElement*> items(dstore->getAllContents("", m_enableMultiThread ? m_run : 0));
+  std::vector<MonitorElement*> items(dstore->getAllContents("", m_run, 0));
   for (std::vector<MonitorElement*>::iterator it = items.begin(), itEnd = items.end(); it != itEnd; ++it) {
-    if (not(*it)->getLumiFlag()) {
-      std::map<unsigned int, unsigned int>::iterator itFound = m_dqmKindToTypeIndex.find((int)(*it)->kind());
-      assert(itFound != m_dqmKindToTypeIndex.end());
-      m_treeHelpers[itFound->second]->fill(*it);
-    }
+    assert((*it)->getScope() == MonitorElementData::Scope::RUN);
+    std::map<unsigned int, unsigned int>::iterator itFound = m_dqmKindToTypeIndex.find((int)(*it)->kind());
+    assert(itFound != m_dqmKindToTypeIndex.end());
+    m_treeHelpers[itFound->second]->fill(*it);
   }
 
   const edm::ProcessHistoryID& id = iRun.processHistoryID();
@@ -564,7 +564,7 @@ void DQMRootOutputModule::fillDescriptions(edm::ConfigurationDescriptions& descr
   desc.addOptionalUntracked<int>("splitLevel", 99)
       ->setComment("UNUSED Only here to allow older configurations written for PoolOutputModule to work.");
   const std::vector<std::string> keep = {"drop *", "keep DQMToken_*_*_*"};
-  edm::OutputModule::fillDescription(desc, keep);
+  edm::one::OutputModule<>::fillDescription(desc, keep);
 
   edm::ParameterSetDescription dataSet;
   dataSet.setAllowAnything();
