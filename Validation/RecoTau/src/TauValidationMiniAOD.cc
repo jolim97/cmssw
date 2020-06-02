@@ -565,6 +565,7 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
       }
 	genindex = genindex + 1;
       }
+
       std::cout << "***** Generated Tau!! : "; 
       unsigned dtrpdgID ; //pdgID for daughter
       unsigned numChargedHadrons  = 0; 
