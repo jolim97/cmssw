@@ -45,6 +45,7 @@ else:
 ###################################################################
 process.load('FWCore.MessageService.MessageLogger_cfi')   
 process.MessageLogger.categories.append("PrimaryVertexValidation")  
+process.MessageLogger.categories.append("SplitVertexResolution")
 process.MessageLogger.categories.append("FilterOutLowPt")  
 process.MessageLogger.destinations = cms.untracked.vstring("cout")
 process.MessageLogger.cout = cms.untracked.PSet(
@@ -54,6 +55,7 @@ process.MessageLogger.cout = cms.untracked.PSet(
                                    reportEvery = cms.untracked.int32(1000)
                                    ),                                                      
     PrimaryVertexValidation = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
+    SplitVertexResolution   = cms.untracked.PSet( limit = cms.untracked.int32(-1)),
     FilterOutLowPt          = cms.untracked.PSet( limit = cms.untracked.int32(-1))
     )
 process.MessageLogger.statistics.append('cout') 
@@ -232,7 +234,7 @@ elif (theRefitter == RefitType.STANDARD):
 ####################################################################
 process.TFileService = cms.Service("TFileService",
                                    fileName=cms.string("PVValidation_test_0.root")
-                                  )                                    
+                                  )
 
 ####################################################################
 # Deterministic annealing clustering
@@ -259,6 +261,8 @@ if isDA:
                                                                          minPixelLayersWithHits = cms.int32(2),                      # PX hits > 2                       
                                                                          minSiliconLayersWithHits = cms.int32(5),                    # TK hits > 5  
                                                                          maxD0Significance = cms.double(5.0),                        # fake cut (requiring 1 PXB hit)     
+                                                                         maxD0Error = cms.double(100.0),                        # fake cut (requiring 1 PXB hit)     
+                                                                         maxDzError = cms.double(100.0),                        # fake cut (requiring 1 PXB hit)     
                                                                          minPt = cms.double(0.0),                                    # better for softish events
                                                                          maxEta = cms.double(5.0),                                   # as per recommendation in PR #18330
                                                                          trackQuality = cms.string("any")
@@ -267,6 +271,10 @@ if isDA:
                                            ## MM 04.05.2017 (use settings as in: https://github.com/cms-sw/cmssw/pull/18330)
                                            TkClusParameters=cms.PSet(algorithm=cms.string('DA_vect'),
                                                                      TkDAClusParameters = cms.PSet(coolingFactor = cms.double(0.6),  # moderate annealing speed
+                                                                                                   zrange = cms.double(4.0),
+                                                                                                   delta_highT = cms.double(1.e-2),  # convergence requirement at high T
+                                                                                                   delta_lowT = cms.double(1.e-3),   # convergence requirement at low T
+                                                                                                   convergence_mode = cms.int32(0),  # 0 = two steps, 1 = dynamic with sqrt(T)
                                                                                                    Tmin = cms.double(2.0),           # end of vertex splitting
                                                                                                    Tpurge = cms.double(2.0),         # cleaning 
                                                                                                    Tstop = cms.double(0.5),          # end of annealing
@@ -304,6 +312,8 @@ else:
                                                                          minPixelLayersWithHits=cms.int32(2),                        # PX hits > 2                   
                                                                          minSiliconLayersWithHits = cms.int32(5),                    # TK hits > 5                   
                                                                          maxD0Significance = cms.double(5.0),                        # fake cut (requiring 1 PXB hit)
+                                                                         maxD0Error = cms.double(100.0),                        # fake cut (requiring 1 PXB hit)     
+                                                                         maxDzError = cms.double(100.0),                        # fake cut (requiring 1 PXB hit)     
                                                                          minPt = cms.double(0.0),                                    # better for softish events    
                                                                          maxEta = cms.double(5.0),                                   # as per recommendation in PR #18330 
                                                                          trackQuality = cms.string("any")
@@ -323,3 +333,57 @@ else:
 process.p = cms.Path(process.goodvertexSkim*
                      process.seqTrackselRefit*
                      process.PVValidation)
+
+## PV refit part
+process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
+
+from RecoVertex.PrimaryVertexProducer.OfflinePrimaryVertices_cfi import offlinePrimaryVertices
+process.offlinePrimaryVerticesFromRefittedTrks  = offlinePrimaryVertices.clone()
+process.offlinePrimaryVerticesFromRefittedTrks.TrackLabel                                       = cms.InputTag("FinalTrackRefitter")
+process.offlinePrimaryVerticesFromRefittedTrks.vertexCollections.maxDistanceToBeam              = 1
+process.offlinePrimaryVerticesFromRefittedTrks.TkFilterParameters.maxNormalizedChi2             = 20
+process.offlinePrimaryVerticesFromRefittedTrks.TkFilterParameters.minSiliconLayersWithHits      = 5
+process.offlinePrimaryVerticesFromRefittedTrks.TkFilterParameters.maxD0Significance             = 5.0
+process.offlinePrimaryVerticesFromRefittedTrks.TkFilterParameters.maxD0Error                    = 100.0
+process.offlinePrimaryVerticesFromRefittedTrks.TkFilterParameters.maxDzError                    = 100.0
+process.offlinePrimaryVerticesFromRefittedTrks.TkFilterParameters.minPixelLayersWithHits        = 2
+
+###################################################################
+# The trigger filter module
+###################################################################
+from HLTrigger.HLTfilters.triggerResultsFilter_cfi import *
+process.HLTFilter = triggerResultsFilter.clone(
+     triggerConditions = cms.vstring("HLT_ZeroBias_*"),
+     #triggerConditions = cms.vstring("HLT_HT*"),
+     hltResults = cms.InputTag( "TriggerResults", "", "HLT" ),
+     l1tResults = cms.InputTag( "" ),
+     throw = cms.bool(False)
+)
+
+###################################################################
+# The analysis module
+###################################################################
+process.myanalysis = cms.EDAnalyzer("GeneralPurposeTrackAnalyzer",
+                                    TkTag  = cms.string('FinalTrackRefitter'),
+                                    isCosmics = cms.bool(False)
+                                    )
+
+###################################################################
+# The PV resolution module
+###################################################################
+process.PrimaryVertexResolution = cms.EDAnalyzer('SplitVertexResolution',
+                                                 storeNtuple         = cms.bool(True),
+                                                 vtxCollection       = cms.InputTag("offlinePrimaryVerticesFromRefittedTrks"),
+                                                 trackCollection     = cms.InputTag("FinalTrackRefitter"),
+                                                 minVertexNdf        = cms.untracked.double(10.),
+                                                 minVertexMeanWeight = cms.untracked.double(0.5),
+                                                 runControl = cms.untracked.bool(True),
+                                                 runControlNumber = cms.untracked.vuint32(int(runboundary))
+                                                 )
+
+process.p2 = cms.Path(process.HLTFilter                               +
+                      process.seqTrackselRefit                        +
+                      process.offlinePrimaryVerticesFromRefittedTrks  +
+                      process.PrimaryVertexResolution                 +
+                      process.myanalysis
+                      )
