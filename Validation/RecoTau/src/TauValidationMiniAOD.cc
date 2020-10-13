@@ -28,7 +28,8 @@ using namespace reco;
 TauValidationMiniAOD::TauValidationMiniAOD(const edm::ParameterSet& iConfig) {
   
   // Input collection of legitimate taus:
-  tauCollection_ = consumes<pat::TauCollection>(iConfig.getParameter<InputTag>("tauCollection"));
+  //tauCollection_ = consumes<pat::TauCollection>(iConfig.getParameter<InputTag>("tauCollection"));
+  tauCollection_ = consumes<std::vector<pat::Tau>>(iConfig.getParameter<InputTag>("tauCollection"));
   // Input collection to compare to taus:
   refCollectionInputTagToken_ = consumes<edm::View<reco::Candidate> >(iConfig.getParameter<InputTag>("RefCollection"));
   // Information about reference collection:
@@ -446,6 +447,8 @@ void TauValidationMiniAOD::bookHistograms(DQMStore::IBooker& ibooker,
     massLoosevsMuoMap.insert(std::make_pair("", massLoosevsMuo));
     puLoosevsMuoMap.insert(std::make_pair("",   puLoosevsMuo));
   }
+
+  std::cout << "\n******** Histogram booking is OVER ********\n";
 }
 
 void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -454,21 +457,21 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
   std::cout << "******** Entering the Analyze Function ********\n";
 
   // create a handle to the tau collection
-  edm::Handle<pat::TauCollection> taus;
+  //edm::Handle<pat::TauCollection> taus;
+  edm::Handle<std::vector<pat::Tau>> taus;
   bool isTau = iEvent.getByToken(tauCollection_, taus);
   if (!isTau) {
     std::cerr << "ERROR: Tau collection not found while running TauValidationMiniAOD.cc " << std::endl;
     return;
   }
 
+  std::cout << "******** Tau seems to be OK ********\n";
+  std::cout << "n taus : " << taus->size() << "\n";
+
   // create a handle to the reference collection
   typedef edm::View<reco::Candidate> refCandidateCollection;
   Handle<refCandidateCollection> ReferenceCollection;
   bool isRef = iEvent.getByToken(refCollectionInputTagToken_, ReferenceCollection);
-  if (!isRef) {
-    std::cerr << "ERROR: Reference collection not found while running TauValidationMiniAOD.cc " << std::endl;
-    return;
-  }
 
   // create a handle to the primary vertex collection
   Handle<VertexCollection> pvHandle;
@@ -476,16 +479,27 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
   if (!isPV) {
     std::cerr << "ERROR: PV collection not found while running TauValidationMiniAOD.cc" << std::endl;
   }
+  std::cout << "PV : " << isPV << "\n";
   // create a handle to the gen Part collection
   edm::Handle<std::vector<reco::GenParticle>> genParticles;
   iEvent.getByToken(prunedGenToken_, genParticles);
+
+  std::cout << "n gen part daughters : " << genParticles->at(0).numberOfDaughters() << "\n" ;
 
   std::vector<const reco::GenParticle*> GenTaus;
   
   // temp
   std::cout << "********* Made it past the PV collection *********\n";
 
+  
+  std::cout << "is REF : " << isRef << "\n";
+  if (!isRef) {
+    std::cerr << "ERROR: Reference collection not found while running TauValidationMiniAOD.cc " << std::endl;
+    return;
+  }
+
   // dR match reference object to tau
+  if (isRef) {
   for (refCandidateCollection::const_iterator RefJet = ReferenceCollection->begin();
        RefJet != ReferenceCollection->end(); RefJet++) {
     
@@ -723,4 +737,5 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
       }
     }
   }
+}
 }

@@ -2,12 +2,12 @@
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: step4 --mc --filetype DQM --conditions auto:run2_mc_FULL -s HARVESTING:@allForPrompt --era Run2_2018 --scenario pp --filein file:RECO_RAW2DIGI_L1Reco_RECO_EI_PAT_VALIDATION_DQM_inDQM.root --python_filename=harvesting.py --no_exec
+# with command line options: step4 --mc --filetype DQM --conditions auto:run2_mc -s HARVESTING:@allForPrompt --era Run2_2017 --scenario pp --filein file:step2_VALIDATION_DQM.root --python_filename=harvesting.py --no_exec
 import FWCore.ParameterSet.Config as cms
 
-from Configuration.Eras.Era_Run2_2018_cff import Run2_2018
+from Configuration.Eras.Era_Run2_2017_cff import Run2_2017
 
-process = cms.Process('HARVESTING',Run2_2018)
+process = cms.Process('HARVESTING',Run2_2017)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -28,7 +28,7 @@ process.maxEvents = cms.untracked.PSet(
 
 # Input source
 process.source = cms.Source("DQMRootSource",
-    fileNames = cms.untracked.vstring('file:RECO_RAW2DIGI_L1Reco_RECO_EI_PAT_VALIDATION_DQM_inDQM.root')
+    fileNames = cms.untracked.vstring('file:step2_VALIDATION_DQM.root')
 )
 
 process.options = cms.untracked.PSet(
@@ -71,7 +71,7 @@ process.configurationMetadata = cms.untracked.PSet(
 
 # Other statements
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc_FULL', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 
 # Path and EndPath definitions
 process.genHarvesting = cms.Path(process.postValidation_gen)
