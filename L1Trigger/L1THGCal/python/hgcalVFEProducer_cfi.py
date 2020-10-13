@@ -34,6 +34,11 @@ frontend_thickness_corrections = [c/c200 for c in frontend_thickness_corrections
 fCPerMIP_200 = fCPerMIPee[1]
 thicknessCorrection_200 = thicknessCorrection[1]
 
+# NOSE parameters
+fCPerMIPnose = recoparam.HGCalUncalibRecHit.HGCHFNoseConfig.fCPerMIP
+layerWeightsNose = recocalibparam.dEdX.weightsNose
+thicknessCorrectionNose = recocalibparam.HGCalRecHit.thicknessNoseCorrection
+
 # Parameters used in several places
 triggerCellLsbBeforeCompression = 100./1024.
 triggerCellTruncationBits = 0
@@ -54,6 +59,7 @@ vfe_proc = cms.PSet( ProcessorName = cms.string('HGCalVFEProcessorSums'),
                      adcnBits_sc = adcNbits_sc,
                      tdcsaturation_sc = tdcSaturation_sc,
                      linnBits = cms.uint32(16),
+                     oot_coefficients = cms.vdouble(0., 0.), # OOT PU subtraction coeffs for samples (bx-2, bx-1). (0,0) = no OOT PU subtraction
                      siliconCellLSB_fC =  cms.double( triggerCellLsbBeforeCompression*(2**triggerCellTruncationBits) ),
                      scintillatorCellLSB_MIP = cms.double(float(adcSaturation_sc.value())/(2**float(adcNbits_sc.value()))),
                      noiseSilicon = cms.PSet(),
@@ -67,9 +73,12 @@ vfe_proc = cms.PSet( ProcessorName = cms.string('HGCalVFEProcessorSums'),
                      rounding = cms.bool(True),
                      # Trigger cell calibration
                      fCperMIP = cms.double(fCPerMIP_200),
+                     fCperMIPnose = cms.vdouble(fCPerMIPnose),
                      dEdXweights = layerWeights,
+                     dEdXweightsNose = layerWeightsNose,
                      ThicknessCorrections = cms.vdouble(frontend_thickness_corrections),
-                     thickCorr = cms.double(thicknessCorrection_200)
+                     thickCorr = cms.double(thicknessCorrection_200),
+                     thickCorrNose = cms.vdouble(thicknessCorrectionNose),
                      )
 
 # isolate these refs in case they aren't available in some other WF
@@ -86,4 +95,12 @@ hgcalVFEProducer = cms.EDProducer(
         bhDigis = cms.InputTag('simHGCalUnsuppressedDigis:HEback'),
         ProcessorParameters = vfe_proc.clone()
        )
+
+hfnoseVFEProducer = cms.EDProducer(
+        "HFNoseVFEProducer",
+        noseDigis = cms.InputTag('simHFNoseUnsuppressedDigis:HFNose'),
+        ProcessorParameters = vfe_proc.clone()
+       )
+
+
 

@@ -18,6 +18,7 @@ PuppiContainer::PuppiContainer(const edm::ParameterSet &iConfig) {
   fPtMaxPhotons = iConfig.getParameter<double>("PtMaxPhotons");
   fEtaMaxPhotons = iConfig.getParameter<double>("EtaMaxPhotons");
   fPtMaxNeutrals = iConfig.getParameter<double>("PtMaxNeutrals");
+  fPtMaxNeutralsStartSlope = iConfig.getParameter<double>("PtMaxNeutralsStartSlope");
   std::vector<edm::ParameterSet> lAlgos = iConfig.getParameter<std::vector<edm::ParameterSet> >("algos");
   fNAlgos = lAlgos.size();
   for (unsigned int i0 = 0; i0 < lAlgos.size(); i0++) {
@@ -91,6 +92,8 @@ double PuppiContainer::var_within_R(int iId,
   near_pts.reserve(std::min(50UL, particles.size()));
   const double r2 = R * R;
   for (auto const &part : particles) {
+    if (part.puppi_register() == 3)
+      continue;
     //squared_distance is in (y,phi) coords: rap() has faster access -> check it first
     if (std::abs(part.rap() - centre.rap()) < R && part.squared_distance(centre) < r2) {
       near_dR2s.push_back(reco::deltaR2(part, centre));
@@ -295,6 +298,9 @@ std::vector<double> const &PuppiContainer::puppiWeights() {
       pWeight = 1;
     if (rParticle.id == 2 && fApplyCHS)
       pWeight = 0;
+    //Apply weight of 1 for leptons if puppiNoLep
+    if (rParticle.id == 3)
+      pWeight = 1;
     //Basic Weight Checks
     if (!edm::isFinite(pWeight)) {
       pWeight = 0.0;
@@ -311,7 +317,10 @@ std::vector<double> const &PuppiContainer::puppiWeights() {
       pWeight = 1.;
     // Protect high pT neutrals
     else if ((fPtMaxNeutrals > 0) && (rParticle.id == 0))
-      pWeight = std::clamp(fPFParticles[i0].pt() / fPtMaxNeutrals, pWeight, 1.);
+      pWeight =
+          std::clamp((fPFParticles[i0].pt() - fPtMaxNeutralsStartSlope) / (fPtMaxNeutrals - fPtMaxNeutralsStartSlope),
+                     pWeight,
+                     1.);
     if (pWeight < fPuppiWeightCut)
       pWeight = 0;  //==> Elminate the low Weight stuff
     if (fInvert)
