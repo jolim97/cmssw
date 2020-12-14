@@ -3,6 +3,10 @@
 <use   name="FWCore/ParameterSet"/>
 <use   name="DataFormats/TauReco"/>
 <use   name="DataFormats/PatCandidates"/>
+<use   name="DataFormats/HepMCCandidate"/>
+<use   name="PhysicsTools/PatUtils"/>
+<use   name="PhysicsTools/PatAlgos"/>
+<use   name="SimGeneral/HepPDTESSource"/>
 <use   name="DQMServices/Core"/>
 <use   name="PhysicsTools/JetMCUtils"/>
 <use   name="CommonTools/Utils"/>

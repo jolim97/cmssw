@@ -498,9 +498,10 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
   std::cout << "********* Made it past the PV collection *********\n";
 
   // dR match reference object to tau
-for(std::vector<reco::GenJet>::const_iterator   RefJet = genJets->begin(); RefJet != genJets->end(); RefJet++ ){
-//  for (refCandidateCollection::const_iterator RefJet = ReferenceCollection->begin();
-//       RefJet != ReferenceCollection->end(); RefJet++) {
+//for(std::vector<reco::GenJet>::const_iterator   RefJet = genJets->begin(); RefJet != genJets->end(); RefJet++ ){
+//for(std::vector<reco::GenParticle>::const_iterator   RefJet = genParticles->begin(); RefJet != genParticles->end(); RefJet++ ){
+for (refCandidateCollection::const_iterator RefJet = ReferenceCollection->begin();
+     RefJet != ReferenceCollection->end(); RefJet++) {
     float dRmin = 0.15;
     int matchedTauIndex;
     float gendRmin = 0.15;
@@ -508,6 +509,7 @@ for(std::vector<reco::GenJet>::const_iterator   RefJet = genJets->begin(); RefJe
     matchedTauIndex = -99;
     genmatchedTauIndex = -99;
     std::cout << "RefJet PDGID : " << RefJet->pdgId() << "\n";
+    //if (abs(RefJet->pdgId())!=13) continue;
     std::cout << "matchedTauIndex ini : " << matchedTauIndex << "\n";
     std::cout << "genmatchedTauIndex ini :" << genmatchedTauIndex << "\n"; 
     for (unsigned iTau = 0; iTau < taus->size(); iTau++) {

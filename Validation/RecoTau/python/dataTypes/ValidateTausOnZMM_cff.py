@@ -8,27 +8,37 @@ from RecoJets.Configuration.GenJetParticles_cff import *
 
 from SimGeneral.HepPDTESSource.pythiapdt_cfi import *
 import PhysicsTools.PatAlgos.tools.helpers as helpers
+from PhysicsTools.PatAlgos.slimming.prunedGenParticles_cfi import prunedGenParticles 
 
-selectMuons = cms.EDProducer(
-    "GenParticlePruner",
-    src = cms.InputTag("genParticles"),
-    select = cms.vstring(
-    "drop  *  ", # this is the default
-    "keep++ pdgId = 13",
-    "keep++ pdgId = -13",
-    )
-)
+#selectMuons = cms.EDProducer(
+#    "GenParticlePruner",
+#    src = cms.untracked.InputTag("prunedGenParticles"),
+#    select = cms.vstring(
+#    "drop  *  ", # this is the default
+#    "keep++ pdgId = 13",
+#    "keep++ pdgId = -13",
+#    )
+#)
 
-selectStableMuons = genParticlesForJets.clone(src = cms.InputTag("selectMuons"))
+#selectStableMuons = genParticlesForJets.clone(src = cms.InputTag("selectMuons"))
 
 print(8*"*")
 print("Here the EDFilter defined as source it gets muons from gen particles from an ED Producer ")
 print(8*"*")
-kinematicSelectedTauValDenominatorZMM = cms.EDFilter(
-   "CandPtrSelector",
-   src = cms.InputTag('selectStableMuons'),
-   cut = kinematicSelectedTauValDenominatorCut,#cms.string('pt > 5. && abs(eta) < 2.5'), #Defined: Validation.RecoTau.RecoTauValidation_cfi 
-   filter = cms.bool(False)
+#kinematicSelectedTauValDenominatorZMM = cms.EDFilter(
+#   "CandPtrSelector",
+#   src = cms.InputTag('selectStableMuons'),
+#   cut = kinematicSelectedTauValDenominatorCut,#cms.string('pt > 5. && abs(eta) < 2.5'), #Defined: Validation.RecoTau.RecoTauValidation_cfi 
+#   filter = cms.bool(False)
+#)
+kinematicSelectedTauValDenominatorZMM = cms.EDProducer(
+	"genMuons",
+	src = cms.InputTag("prunedGenParticles"),
+	select = cms.vstring(
+	"drop  *  ", # this is the default
+	"keep++ pdgId = 13",
+	"keep++ pdgId = -13",
+	)
 )
 
 procAttributes = dir(proc) #Takes a snapshot of what there in the process
@@ -36,11 +46,13 @@ helpers.cloneProcessingSnippet( proc, proc.TauValNumeratorAndDenominator, 'ZMM')
 helpers.cloneProcessingSnippet( proc, proc.TauEfficiencies, 'ZMM') #clones the sequence inside the process with ZMM postfix
 helpers.massSearchReplaceAnyInputTag(proc.TauValNumeratorAndDenominatorZMM, 'kinematicSelectedTauValDenominator', 'kinematicSelectedTauValDenominatorZMM') #sets the correct input tag
 
+print(dir(proc))
 #adds to TauValNumeratorAndDenominator modules in the sequence ZMM to the extention name
 zttLabeler = lambda module : SetValidationExtention(module, 'ZMM')
 zttModifier = ApplyFunctionToSequence(zttLabeler)
 proc.TauValNumeratorAndDenominatorZMM.visit(zttModifier)
 
+print(dir(proc))
 #Set discriminators
 discs_to_retain = ['ByDecayModeFinding', 'MuonRejection']
 proc.RunHPSValidationZMM.discriminators = cms.VPSet([p for p in proc.RunHPSValidationZMM.discriminators if any(disc in p.discriminator.value() for disc in discs_to_retain) ])
@@ -67,10 +79,10 @@ for newAttr in newProcAttributes:
     locals()[newAttr] = getattr(proc,newAttr)
 
 produceDenominatorZMM = cms.Sequence(
-      selectMuons
-      +selectStableMuons
+#      selectMuons
+#      +selectStableMuons
 #      +objectTypeSelectedTauValDenominatorModule
-      +kinematicSelectedTauValDenominatorZMM
+      kinematicSelectedTauValDenominatorZMM
       )
 
 produceDenominator = cms.Sequence(produceDenominatorZMM)

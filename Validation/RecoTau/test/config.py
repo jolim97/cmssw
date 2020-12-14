@@ -32,6 +32,8 @@ process.load('RecoJets.Configuration.GenJetParticles_cff')
 #process.load('Validation.RecoParticleFlow.miniAODValidation_cff')
 #process.load('Validation.EventGenerator.BasicGenValidation_cff')
 #process.load('Validation.RecoTau.dataTypes.ValidateTausOnQCD_cff')
+process.load('Validation.RecoTau.dataTypes.ValidateTausOnZTT_cff')
+process.load('Validation.RecoTau.dataTypes.ValidateTausOnZMM_cff')
 
 #process.load('Configuration.StandardSequences.Validation_cff')
 
@@ -78,6 +80,9 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2017_realistic', '
 #process.validation_step = cms.EndPath(process.tauValidationSequenceMiniAOD)
 #process.validation_step = cms.EndPath(process.tauValidationMiniAODRealData)
 process.validation_step = cms.EndPath(process.tauValidationMiniAODZMM)
+print("****")
+print(dir(process))
+print("****")
 #process.dqmoffline_step = cms.EndPath(process.DQMOfflineMiniAOD)
 #process.dqmofflineOnPAT_step = cms.EndPath(process.PostDQMOfflineMiniAOD)
 process.DQMoutput_step = cms.EndPath(process.DQMoutput)
