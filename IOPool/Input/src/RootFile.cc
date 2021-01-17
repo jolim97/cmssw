@@ -44,6 +44,7 @@
 #include "FWCore/Utilities/interface/GlobalIdentifier.h"
 #include "FWCore/Utilities/interface/ReleaseVersion.h"
 #include "FWCore/Utilities/interface/stemFromPath.h"
+#include "FWCore/Utilities/interface/thread_safety_macros.h"
 #include "FWCore/Version/interface/GetReleaseVersion.h"
 #include "IOPool/Common/interface/getWrapperBasePtr.h"
 
@@ -747,6 +748,7 @@ namespace edm {
     if (indexIntoFileIter_ == indexIntoFileEnd_) {
       return false;
     }
+
     if (eventSkipperByID_ && eventSkipperByID_->somethingToSkip()) {
       // See first if the entire lumi or run is skipped, so we won't have to read the event Auxiliary in that case.
       if (eventSkipperByID_->skipIt(indexIntoFileIter_.run(), indexIntoFileIter_.lumi(), 0U)) {
@@ -763,18 +765,16 @@ namespace edm {
 
       // Skip runs with no lumis if either lumisToSkip or lumisToProcess have been set to select lumis
       if (indexIntoFileIter_.getEntryType() == IndexIntoFile::kRun && eventSkipperByID_->skippingLumis()) {
-        IndexIntoFile::IndexIntoFileItr iterLumi = indexIntoFileIter_;
-
         // There are no lumis in this run, not even ones we will skip
-        if (iterLumi.peekAheadAtLumi() == IndexIntoFile::invalidLumi) {
+        if (indexIntoFileIter_.peekAheadAtLumi() == IndexIntoFile::invalidLumi) {
           return true;
         }
         // If we get here there are lumis in the run, check to see if we are skipping all of them
         do {
-          if (!eventSkipperByID_->skipIt(iterLumi.run(), iterLumi.peekAheadAtLumi(), 0U)) {
+          if (!eventSkipperByID_->skipIt(indexIntoFileIter_.run(), indexIntoFileIter_.peekAheadAtLumi(), 0U)) {
             return false;
           }
-        } while (iterLumi.skipLumiInRun());
+        } while (indexIntoFileIter_.skipLumiInRun());
         return true;
       }
     }
@@ -818,7 +818,7 @@ namespace edm {
     }
     if (entryType == IndexIntoFile::kRun) {
       run = indexIntoFileIter_.run();
-      runHelper_->checkForNewRun(run);
+      runHelper_->checkForNewRun(run, indexIntoFileIter_.peekAheadAtLumi());
       return IndexIntoFile::kRun;
     } else if (processingMode_ == InputSource::Runs) {
       indexIntoFileIter_.advanceToNextRun();
@@ -1461,8 +1461,9 @@ namespace edm {
 
     // We're not done ... so prepare the EventPrincipal
     eventTree_.insertEntryForIndex(principal.transitionIndex());
+    auto history = processHistoryRegistry_->getMapped(eventAux().processHistoryID());
     principal.fillEventPrincipal(eventAux(),
-                                 *processHistoryRegistry_,
+                                 history,
                                  std::move(eventSelectionIDs_),
                                  std::move(branchListIndexes_),
                                  *(makeProductProvenanceRetriever(principal.streamID().value())),
@@ -1616,7 +1617,8 @@ namespace edm {
     lumiTree_.setEntryNumber(indexIntoFileIter_.entry());
     // NOTE: we use 0 for the index since do not do delayed reads for LuminosityBlockPrincipals
     lumiTree_.insertEntryForIndex(0);
-    lumiPrincipal.fillLuminosityBlockPrincipal(*processHistoryRegistry_, lumiTree_.resetAndGetRootDelayedReader());
+    auto history = processHistoryRegistry_->getMapped(lumiPrincipal.aux().processHistoryID());
+    lumiPrincipal.fillLuminosityBlockPrincipal(history, lumiTree_.resetAndGetRootDelayedReader());
     // Read in all the products now.
     lumiPrincipal.readAllFromSourceAndMergeImmediately();
     ++indexIntoFileIter_;
@@ -2006,7 +2008,8 @@ namespace edm {
 
     RootTree* rootTree_;
     ProductProvenanceVector infoVector_;
-    mutable ProductProvenanceVector* pInfoVector_;
+    //All access to a ROOT file is serialized
+    CMS_SA_ALLOW mutable ProductProvenanceVector* pInfoVector_;
     DaqProvenanceHelper const* daqProvenanceHelper_;
     std::shared_ptr<std::recursive_mutex> mutex_;
     SharedResourcesAcquirer acquirer_;
@@ -2071,7 +2074,8 @@ namespace edm {
 
     edm::propagate_const<RootTree*> rootTree_;
     std::vector<EventEntryInfo> infoVector_;
-    mutable std::vector<EventEntryInfo>* pInfoVector_;
+    //All access to ROOT file are serialized
+    CMS_SA_ALLOW mutable std::vector<EventEntryInfo>* pInfoVector_;
     EntryDescriptionMap const& entryDescriptionMap_;
     DaqProvenanceHelper const* daqProvenanceHelper_;
     std::shared_ptr<std::recursive_mutex> mutex_;

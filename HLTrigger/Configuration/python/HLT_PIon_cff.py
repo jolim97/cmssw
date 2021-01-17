@@ -1,13 +1,21 @@
-# hltGetConfiguration --cff --data /dev/CMSSW_11_0_0/PIon --type PIon
+# hltGetConfiguration --cff --data /dev/CMSSW_11_1_0/PIon --type PIon
 
+<<<<<<< HEAD
 # /dev/CMSSW_11_0_0/PIon/V13 (CMSSW_11_0_0)
+=======
+# /dev/CMSSW_11_1_0/PIon/V9 (CMSSW_11_1_0_pre7)
+>>>>>>> a938503bfd2546b889b8b3c619820835fd68a0d7
 
 import FWCore.ParameterSet.Config as cms
 
 fragment = cms.ProcessFragment( "HLT" )
 
 fragment.HLTConfigVersion = cms.PSet(
+<<<<<<< HEAD
   tableName = cms.string('/dev/CMSSW_11_0_0/PIon/V13')
+=======
+  tableName = cms.string('/dev/CMSSW_11_1_0/PIon/V9')
+>>>>>>> a938503bfd2546b889b8b3c619820835fd68a0d7
 )
 
 fragment.transferSystem = cms.PSet( 
@@ -5306,7 +5314,11 @@ fragment.siStripLorentzAngleDepESProducer = cms.ESProducer( "SiStripLorentzAngle
 
 fragment.ThroughputService = cms.Service( "ThroughputService",
     dqmPath = cms.untracked.string( "HLT/Throughput" ),
+    eventRange = cms.untracked.uint32( 10000 ),
     timeRange = cms.untracked.double( 60000.0 ),
+    printEventSummary = cms.untracked.bool( False ),
+    eventResolution = cms.untracked.uint32( 1 ),
+    enableDQM = cms.untracked.bool( True ),
     dqmPathByProcesses = cms.untracked.bool( False ),
     timeResolution = cms.untracked.double( 5.828 )
 )

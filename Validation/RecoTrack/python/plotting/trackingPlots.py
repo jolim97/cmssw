@@ -402,6 +402,13 @@ _resolutionsPt = PlotGroup("resolutionsPt", [
     Plot("dzres_vs_pt_Sigma", ytitle="#sigma(#delta d_{z}) (cm)", **_common),
     Plot("ptres_vs_pt_Sigma", ytitle="#sigma(#delta p_{T}/p_{T})", **_common),
 ])
+_common = {"title": "", "ylog": True, "xtitle": "TP #Phi (PCA to beamline)", "ymin": _minMaxResol, "ymax": _minMaxResol}
+_resolutionsPhi = PlotGroup("resolutionsPhi", [
+    Plot("dxyres_vs_phi_Sigma", ytitle="#sigma(#delta d_{xy}) (cm)", **_common),
+    Plot("dzres_vs_phi_Sigma", ytitle="#sigma(#delta d_{z}) (cm)", **_common),
+    Plot("phires_vs_phi_Sigma", ytitle="#sigma(#delta #phi) (rad)", **_common),
+    Plot("ptres_vs_phi_Sigma", ytitle="#sigma(#delta p_{T}/p_{T})", **_common),
+])
 
 ## Extended set of plots
 _extDistPtEtaPhi = PlotGroup("distPtEtaPhi",
@@ -625,8 +632,8 @@ def _mapCollectionToAlgoQuality(collName):
         collNameLow = collNameLow[:i_seeds]
 
     algo = None
-    prefixes = ["cutsreco", "cutsrecofrompv", "cutsrecofrompv2", "cutsrecofrompvalltp"]
-    if collNameLow in ["general", "generalfrompv"]+prefixes:
+    prefixes = ["cutsreco", "cutsrecofrompv", "cutsrecofrompv2", "cutsrecofrompvalltp", "cutsrecoetagreater2p7"]
+    if collNameLow in ["general", "generalfrompv", "generaletagreater2p7"]+prefixes:
         algo = "ootb"
     else:
         def testColl(coll):
@@ -1220,6 +1227,7 @@ _recoBasedPlots = [
     _hitsAndPt,
     _pulls,
     _resolutionsEta,
+    _resolutionsPhi,
     _resolutionsPt,
     _tuning,
 ]
@@ -1242,6 +1250,7 @@ _seedingBuildingPlots = _simBasedPlots + [
 _buildingExtendedPlots = [
     _pulls,
     _resolutionsEta,
+    _resolutionsPhi,
     _resolutionsPt,
     _tuning,
 ]
@@ -1354,6 +1363,7 @@ def _appendTrackingPlots(lastDirName, name, algoPlots, onlyForPileup=False, only
         plotter.appendTable(summaryName, folders, TrackingSummaryTable(section="ak4PFJets", collection=TrackingSummaryTable.AK4PFJets))
 _appendTrackingPlots("Track", "", _simBasedPlots+_recoBasedPlots)
 _appendTrackingPlots("TrackTPPtLess09", "tpPtLess09", _simBasedPlots)
+_appendTrackingPlots("TrackTPEtaGreater2p7", "tpEtaGreater2p7", _simBasedPlots+_recoBasedPlots)
 _appendTrackingPlots("TrackAllTPEffic", "allTPEffic", _simBasedPlots, onlyForPileup=True)
 _appendTrackingPlots("TrackFromPV", "fromPV", _simBasedPlots+_recoBasedPlots, onlyForPileup=True)
 _appendTrackingPlots("TrackFromPVAllTP", "fromPVAllTP", _simBasedPlots+_recoBasedPlots, onlyForPileup=True)

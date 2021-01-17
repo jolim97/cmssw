@@ -5,6 +5,8 @@ import copy
 import re
 import os
 
+import RecoTauTag.Configuration.HPSPFTaus_cff as RecoModules #Working point indices are extracted from here
+
 #from Validation.RecoTau.ValidationOptions_cff import *
 
 
@@ -138,6 +140,20 @@ fastSim.toModify(
 proc.RunHPSValidation.ExtensionName = ""
 #RunHPSValidation.TauPtCut = cms.double(15.)
 proc.RunHPSValidation.TauProducer   = cms.InputTag('hpsPFTauProducer')
+
+def tauIDMVAinputs(module, wp):
+    return {"container" : cms.string(module), "workingPointIndex" : cms.int32(-1 if wp=="raw" else getattr(RecoModules, module).workingPoints.index(wp))}
+def tauIDbasicinputs(module, wp):
+    index = RecoModules.getBasicTauDiscriminatorRawIndex(getattr(RecoModules, module), wp, True)
+    if index==None:
+        index = RecoModules.getBasicTauDiscriminatorWPIndex(getattr(RecoModules, module), wp, True)
+    else:
+        index = -index - 1 #use negative indices for raw values
+    if index!=None:
+        return {"container" : cms.string(module), "workingPointIndex" : cms.int32(index)}
+    print ("Basic Tau Discriminator <{}> <{}> for Validation configuration not found!".format(module, wp))
+    raise Exception
+
 proc.RunHPSValidation.discriminators = cms.VPSet(
    cms.PSet( discriminator = cms.string("hpsPFTauDiscriminationByDecayModeFinding"),selectionCut = cms.double(0.5),plotStep = cms.bool(True)),
    cms.PSet( discriminator = cms.string("hpsPFTauDiscriminationByDecayModeFindingNewDMs"),selectionCut = cms.double(0.5),plotStep = cms.bool(True)),

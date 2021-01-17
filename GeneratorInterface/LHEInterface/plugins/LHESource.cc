@@ -34,7 +34,7 @@ using namespace lhef;
 
 LHESource::LHESource(const edm::ParameterSet& params, const edm::InputSourceDescription& desc)
     : ProducerSourceFromFiles(params, desc, false),
-      reader_(new LHEReader(fileNames(), params.getUntrackedParameter<unsigned int>("skipEvents", 0))),
+      reader_(new LHEReader(fileNames(0), params.getUntrackedParameter<unsigned int>("skipEvents", 0))),
       lheProvenanceHelper_(
           edm::TypeID(typeid(LHEEventProduct)), edm::TypeID(typeid(LHERunInfoProduct)), productRegistryUpdate()),
       phid_() {
@@ -109,7 +109,8 @@ void LHESource::readRun_(edm::RunPrincipal& runPrincipal) {
 
 void LHESource::readLuminosityBlock_(edm::LuminosityBlockPrincipal& lumiPrincipal) {
   luminosityBlockAuxiliary()->setProcessHistoryID(phid_);
-  lumiPrincipal.fillLuminosityBlockPrincipal(processHistoryRegistryForUpdate());
+  lumiPrincipal.fillLuminosityBlockPrincipal(
+      processHistoryRegistry().getMapped(lumiPrincipal.aux().processHistoryID()));
 }
 
 void LHESource::putRunInfoProduct(edm::RunPrincipal& iRunPrincipal) {
@@ -137,7 +138,7 @@ void LHESource::readEvent_(edm::EventPrincipal& eventPrincipal) {
   assert(eventCached() || processingMode() != RunsLumisAndEvents);
   edm::EventAuxiliary aux(eventID(), processGUID(), edm::Timestamp(presentTime()), false);
   aux.setProcessHistoryID(phid_);
-  eventPrincipal.fillEventPrincipal(aux, processHistoryRegistryForUpdate());
+  eventPrincipal.fillEventPrincipal(aux, processHistoryRegistry().getMapped(aux.processHistoryID()));
 
   std::unique_ptr<LHEEventProduct> product(
       new LHEEventProduct(*partonLevel_->getHEPEUP(), partonLevel_->originalXWGTUP()));
