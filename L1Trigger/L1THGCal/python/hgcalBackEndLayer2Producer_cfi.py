@@ -1,15 +1,12 @@
 import FWCore.ParameterSet.Config as cms
 
-import SimCalorimetry.HGCalSimProducers.hgcalDigitizer_cfi as digiparam
-import RecoLocalCalo.HGCalRecProducers.HGCalUncalibRecHit_cfi as recoparam
-import RecoLocalCalo.HGCalRecProducers.HGCalRecHit_cfi as recocalibparam
-
 from L1Trigger.L1THGCal.egammaIdentification import egamma_identification_drnn_cone, \
                                                     egamma_identification_drnn_dbscan, \
                                                     egamma_identification_histomax
 
 from Configuration.Eras.Modifier_phase2_hgcalV9_cff import phase2_hgcalV9
 from Configuration.Eras.Modifier_phase2_hgcalV10_cff import phase2_hgcalV10
+from Configuration.Eras.Modifier_phase2_hfnose_cff import phase2_hfnose
 
 
 binSums = cms.vuint32(13,               # 0
@@ -82,13 +79,15 @@ histoMax_C3d_seeding_params = cms.PSet(type_histoalgo=cms.string('HistoMaxC3d'),
                                nBins_X1_histo_multicluster=cms.uint32(42), # bin size of about 0.012
                                nBins_X2_histo_multicluster=cms.uint32(216), # bin size of about 0.029
                                binSumsHisto=binSums,
+                               kROverZMin=cms.double(0.076),
+                               kROverZMax=cms.double(0.58),
                                threshold_histo_multicluster=cms.double(10.),
                                neighbour_weights=neighbour_weights_1stOrder,
                                seed_position=cms.string("TCWeighted"),#BinCentre, TCWeighted
                                seeding_space=cms.string("RPhi"),# RPhi, XY
                                seed_smoothing_ecal=seed_smoothing_ecal,
                                seed_smoothing_hcal=seed_smoothing_hcal,
-                               )
+                              )
 
 histoMax_C3d_clustering_params = cms.PSet(dR_multicluster=cms.double(0.03),
                                dR_multicluster_byLayer_coefficientA=cms.vdouble(),
@@ -168,3 +167,19 @@ hgcalBackEndLayer2Producer = cms.EDProducer(
     InputCluster = cms.InputTag('hgcalBackEndLayer1Producer:HGCalBackendLayer1Processor2DClustering'),
     ProcessorParameters = be_proc.clone()
     )
+
+
+hgcalBackEndLayer2ProducerHFNose = hgcalBackEndLayer2Producer.clone(
+    InputCluster = cms.InputTag('hgcalBackEndLayer1ProducerHFNose:HGCalBackendLayer1Processor2DClustering'),
+    ProcessorParameters = dict(
+        C3d_parameters = dict(
+            histoMax_C3d_seeding_parameters = dict(
+                ## note in #Phi same bin size for HGCAL and HFNose
+                nBins_X1_histo_multicluster = 4, # R bin size: 5 FullModules * 8 TP
+                binSumsHisto = cms.vuint32(13,11,9,9),
+                kROverZMin = 0.025,
+                kROverZMax = 0.1
+            )
+        )
+    )
+)

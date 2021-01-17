@@ -1,12 +1,12 @@
 #include "Geometry/MuonNumbering/interface/MuonDDDNumbering.h"
 #include "Geometry/MuonNumbering/interface/MuonBaseNumber.h"
-#include "Geometry/MuonNumbering/interface/MuonDDDConstants.h"
+#include "Geometry/MuonNumbering/interface/MuonGeometryConstants.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 //#define LOCAL_DEBUG
 
-MuonDDDNumbering::MuonDDDNumbering(const MuonDDDConstants &muonConstants) {
-  //  MuonDDDConstants muonConstants;
+MuonDDDNumbering::MuonDDDNumbering(const MuonGeometryConstants &muonConstants) {
+  //  Get constant values from muonConstants
   theLevelPart = muonConstants.getValue("level");
   theSuperPart = muonConstants.getValue("super");
   theBasePart = muonConstants.getValue("base");
@@ -34,7 +34,7 @@ MuonDDDNumbering::MuonDDDNumbering(const MuonDDDConstants &muonConstants) {
 #endif
 }
 
-MuonBaseNumber MuonDDDNumbering::geoHistoryToBaseNumber(const DDGeoHistory &history) {
+MuonBaseNumber MuonDDDNumbering::geoHistoryToBaseNumber(const DDGeoHistory &history) const {
   MuonBaseNumber num;
 
 #ifdef LOCAL_DEBUG
@@ -66,7 +66,24 @@ MuonBaseNumber MuonDDDNumbering::geoHistoryToBaseNumber(const DDGeoHistory &hist
   return num;
 }
 
-int MuonDDDNumbering::getInt(const std::string &s, const DDLogicalPart &part) {
+MuonBaseNumber MuonDDDNumbering::geoHistoryToBaseNumber(const cms::ExpandedNodes &nodes) const {
+  MuonBaseNumber num;
+
+  int ctr(0);
+  for (auto const &it : nodes.tags) {
+    int tag = it / theLevelPart;
+    if (tag > 0) {
+      int offset = nodes.offsets[ctr];
+      int copyno = nodes.copyNos[ctr] + offset % theSuperPart;
+      int super = offset / theSuperPart;
+      num.addBase(tag, super, copyno - theStartCopyNo);
+    }
+    ++ctr;
+  }
+  return num;
+}
+
+int MuonDDDNumbering::getInt(const std::string &s, const DDLogicalPart &part) const {
   DDValue val(s);
   std::vector<const DDsvalues_type *> result = part.specifics();
   std::vector<const DDsvalues_type *>::iterator it = result.begin();

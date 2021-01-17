@@ -20,6 +20,7 @@
 //         Created:  August 13, 2019
 
 #include "Validation/RecoTau/interface/TauValidationMiniAOD.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 using namespace edm;
 using namespace std;
@@ -28,7 +29,8 @@ using namespace reco;
 TauValidationMiniAOD::TauValidationMiniAOD(const edm::ParameterSet& iConfig) {
   
   // Input collection of legitimate taus:
-  tauCollection_ = consumes<pat::TauCollection>(iConfig.getParameter<InputTag>("tauCollection"));
+  //tauCollection_ = consumes<pat::TauCollection>(iConfig.getParameter<InputTag>("tauCollection"));
+  tauCollection_ = consumes<std::vector<pat::Tau>>(iConfig.getParameter<InputTag>("tauCollection"));
   // Input collection to compare to taus:
   refCollectionInputTagToken_ = consumes<edm::View<reco::Candidate> >(iConfig.getParameter<InputTag>("RefCollection"));
   // Information about reference collection:
@@ -68,8 +70,6 @@ void TauValidationMiniAOD::bookHistograms(DQMStore::IBooker& ibooker,
   MonitorElement *dmMigration, *ntau_vs_dm;
   MonitorElement *pTOverProng_dm0, *pTOverProng_dm1, *pTOverProng_dm2, *pTOverProng_dm10, *pTOverProng_dm11; 
   
-  // temp:
-
   // ---------------------------- Book, Map Summary Histograms -------------------------------
   
   ibooker.setCurrentFolder("RecoTauV/miniAODValidation/" + extensionName_ + "/Summary");
@@ -443,6 +443,8 @@ void TauValidationMiniAOD::bookHistograms(DQMStore::IBooker& ibooker,
     massLoosevsMuoMap.insert(std::make_pair("", massLoosevsMuo));
     puLoosevsMuoMap.insert(std::make_pair("",   puLoosevsMuo));
   }
+
+  std::cout << "\n******** Histogram booking is OVER ********\n";
 }
 
 void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -451,10 +453,11 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
   std::cout << "******** Entering the Analyze Function ********\n";
 
   // create a handle to the tau collection
-  edm::Handle<pat::TauCollection> taus;
+  //edm::Handle<pat::TauCollection> taus;
+  edm::Handle<std::vector<pat::Tau>> taus;
   bool isTau = iEvent.getByToken(tauCollection_, taus);
   if (!isTau) {
-    std::cerr << "ERROR: Tau collection not found while running TauValidationMiniAOD.cc " << std::endl;
+    edm::LogWarning("TauValidationMiniAOD") << " Tau collection not found while running TauValidationMiniAOD.cc ";
     return;
   }
 
@@ -469,8 +472,7 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
   edm::Handle<refCandidateCollection> ReferenceCollection;
   bool isRef = iEvent.getByToken(refCollectionInputTagToken_, ReferenceCollection);
   if (!isRef) {
-  //std::cerr << ReferenceCollection << std::endl;
-    std::cerr << "ERROR: Reference collection not found while running TauValidationMiniAOD.cc \n " << std::endl;
+    edm::LogWarning("TauValidationMiniAOD") << " Reference collection not found while running TauValidationMiniAOD.cc ";
     return;
   }
 
@@ -487,8 +489,14 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
   
   // temp
 
+  
+  std::cout << "is REF : " << isRef << "\n";
+  if (!isRef) {
+    std::cerr << "ERROR: Reference collection not found while running TauValidationMiniAOD.cc " << std::endl;
+    return;
+  }
+
   // dR match reference object to tau
-//for(std::vector<reco::GenJet>::const_iterator   RefJet = genJets->begin(); RefJet != genJets->end(); RefJet++ ){
   for (refCandidateCollection::const_iterator RefJet = ReferenceCollection->begin();
        RefJet != ReferenceCollection->end(); RefJet++) {
     float dRmin = 0.15;
@@ -499,7 +507,10 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
     genmatchedTauIndex = -99;
     for (unsigned iTau = 0; iTau < taus->size(); iTau++) {
       pat::TauRef tau(taus, iTau);
-    
+
+      //const reco::GenParticle* genTau = getGenTau(tau);
+      //std::cout << "***** Generated Tau!! : " << genTau->decaymode();
+ 
       //for (pat::TauCollection::const_iterator tau = taus->begin(); tau != taus->end(); tau++) {
       //pat::TauRef matchedTau(*tau);
       
@@ -726,4 +737,5 @@ void TauValidationMiniAOD::analyze(const edm::Event& iEvent, const edm::EventSet
       }
     }
   }
+}
 }
